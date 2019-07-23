@@ -40,6 +40,16 @@ DrawTimeline::~DrawTimeline()
     delete ui;
 }
 
+void DrawTimeline::setSizeLevel(int level)
+{
+    if (level>=0 && level<=m_totleLevel-1) {
+        m_sizeLevel = level;
+        update();
+    }  else {
+        qDebug() << "设置显示的系数有误";
+    }
+}
+
 void DrawTimeline::setTimeRangeInfo(QVector<DrawTimeline::TimeRange> timeRangeInfo)
 {
     m_vecTimeRangeInfo = timeRangeInfo;
@@ -51,11 +61,14 @@ void DrawTimeline::setTimeRangeInfo(QVector<DrawTimeline::TimeRange> timeRangeIn
 
 void DrawTimeline::setStepLevel()
 {
-    m_vecStep.append({2*60*60,80.0});
-    m_vecStep.append({1*60*60,90.0});
-    m_vecStep.append({30*60,100.0});
-    m_vecStep.append({10*60,110.0});
-    m_vecStep.append({5*60,120.0});
+    m_vecStep.append({12*60*60,50.0});
+    m_vecStep.append({6*60*60,60.0});
+    m_vecStep.append({2*60*60,70.0});
+    m_vecStep.append({1*60*60,80.0});
+    m_vecStep.append({30*60,90.0});
+    m_vecStep.append({10*60,100.0});
+    m_vecStep.append({5*60,110.0});
+    m_vecStep.append({1*60,120.0});
     m_totleLevel = m_vecStep.size();
 }
 

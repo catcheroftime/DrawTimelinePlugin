@@ -31,10 +31,11 @@ public:
         QDateTime endtime;
     };
 
-
     explicit DrawTimeline(QWidget *parent = 0);
     ~DrawTimeline();
 
+    void setSizeLevel(int level);
+    QDateTime getCurrentTime() {return m_currentDateTime;}
     void setTimeRangeInfo(QVector<TimeRange> timeRangeInfo);
 
 protected:
@@ -46,7 +47,6 @@ protected:
 
 private slots:
     void on_ptn_levelup_clicked();
-
     void on_ptn_leveldown_clicked();
 
 private:
@@ -58,14 +58,12 @@ private:
 
     int m_pressPointX;
     bool m_isPressed;
-    bool m_isOnce;
 
-    int m_sizeLevel;
     QVector< TimeForDistance> m_vecStep;
     int m_totleLevel;
+    int m_sizeLevel;
 
     QVector<TimeRange> m_vecTimeRangeInfo;
-
 
 private:
     void setStepLevel();
