@@ -18,6 +18,8 @@ public:
 
 private slots:
 
+    void on_ptn_add_clicked();
+
 private:
     Ui::MainWindow *ui;
 

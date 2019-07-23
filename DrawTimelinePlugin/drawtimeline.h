@@ -25,13 +25,17 @@ class QDESIGNER_WIDGET_EXPORT DrawTimeline : public QWidget
     };
 
 public:
-    struct TimeInfo {
-        QTime starttime;
-        QTime endtime;
+    struct TimeRange
+    {
+        QDateTime starttime;
+        QDateTime endtime;
     };
+
 
     explicit DrawTimeline(QWidget *parent = 0);
     ~DrawTimeline();
+
+    void setTimeRangeInfo(QVector<TimeRange> timeRangeInfo);
 
 protected:
     virtual void paintEvent(QPaintEvent *);
@@ -50,13 +54,9 @@ private:
 
     QDateTime m_pressDateTime;
     QDateTime m_currentDateTime;
+    QLabel *m_midDisplayLabel;
 
-    QLabel *m_displayLabel;
-    QLabel *m_fixeDisplayLable;
-    QString m_strVisibleValue;
-
-
-    int m_pressPoint;
+    int m_pressPointX;
     bool m_isPressed;
     bool m_isOnce;
 
@@ -64,8 +64,13 @@ private:
     QVector< TimeForDistance> m_vecStep;
     int m_totleLevel;
 
+    QVector<TimeRange> m_vecTimeRangeInfo;
+
+
 private:
+    void setStepLevel();
     void drawTimescale(QPainter &painter);
+    void drawTimeRangeInfo();
 };
 
 #endif // DRAWTIMELINE_H

@@ -12,41 +12,53 @@ DrawTimeline::DrawTimeline(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::DrawTimeline)
   , m_currentDateTime(QDateTime::currentDateTime())
-  , m_sizeLevel(4)
+  , m_sizeLevel(0)
 {
     ui->setupUi(this);
+    this->setMouseTracking(true);
 
-    m_vecStep.append({2*60*60,80.0});
-    m_vecStep.append({1*60*60,90.0});
-    m_vecStep.append({30*60,100.0});
-    m_vecStep.append({10*60,110.0});
-    m_vecStep.append({5*60,120.0});
-    m_totleLevel = m_vecStep.size();
+    // 设置时间轴时间单位和像素的步长关系
+    setStepLevel();
 
-    m_fixeDisplayLable = new QLabel(this);
-    m_fixeDisplayLable->setFixedSize(QSize(150,18));
-    //设置游标背景为白色
-    m_fixeDisplayLable->setAutoFillBackground(true);
-    QPalette palette1;
-    palette1.setColor(QPalette::Background, Qt::white);
-    m_fixeDisplayLable->setPalette(palette1);
-    m_fixeDisplayLable->setAlignment(Qt::AlignCenter);
-    m_fixeDisplayLable->setStyleSheet("color:rgb(248,248,255);background:transparent");
-    m_fixeDisplayLable->setVisible(true);
+    // 设置中间显示时间的Label和放缩等级按键的样式
+    m_midDisplayLabel = new QLabel(this);
+    m_midDisplayLabel->setFixedSize(QSize(150,22));
+    m_midDisplayLabel->setAlignment(Qt::AlignCenter);
+    m_midDisplayLabel->setStyleSheet("background:rgba(255,255,255,0);color:rgb(255,255,255);");
 
     ui->ptn_levelup->setStyleSheet("QPushButton{background:rgba(255,255,255,0); color:rgb(255,255,255); font-size:12px}"
-                                      "QPushButton:hover{font-size:14px}"
-                                      "QPushButton:pressed{font-size:10px}");
+                                   "QPushButton:hover{font-size:14px}"
+                                   "QPushButton:pressed{font-size:10px}");
 
     ui->ptn_leveldown->setStyleSheet("QPushButton{background:rgba(255,255,255,0); color:rgb(255,255,255); font-size:12px}"
-                                      "QPushButton:hover{font-size:14px}"
-                                      "QPushButton:pressed{font-size:10px}");
+                                     "QPushButton:hover{font-size:14px}"
+                                     "QPushButton:pressed{font-size:10px}");
 }
 
 DrawTimeline::~DrawTimeline()
 {
     delete ui;
 }
+
+void DrawTimeline::setTimeRangeInfo(QVector<DrawTimeline::TimeRange> timeRangeInfo)
+{
+    m_vecTimeRangeInfo = timeRangeInfo;
+    if (!timeRangeInfo.isEmpty()) {
+        m_currentDateTime = m_vecTimeRangeInfo.at(0).starttime;
+    }
+    update();
+}
+
+void DrawTimeline::setStepLevel()
+{
+    m_vecStep.append({2*60*60,80.0});
+    m_vecStep.append({1*60*60,90.0});
+    m_vecStep.append({30*60,100.0});
+    m_vecStep.append({10*60,110.0});
+    m_vecStep.append({5*60,120.0});
+    m_totleLevel = m_vecStep.size();
+}
+
 
 void DrawTimeline::paintEvent(QPaintEvent *)
 {
@@ -61,15 +73,17 @@ void DrawTimeline::paintEvent(QPaintEvent *)
 
     // 显示中间位置时间
     painter.drawLine(this->width()/2, 5, this->width()/2, 105);
-    m_fixeDisplayLable->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
-    m_fixeDisplayLable->move(this->size().width()/2-m_fixeDisplayLable->width()/2,15);
+    m_midDisplayLabel->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
+    m_midDisplayLabel->move(this->size().width()/2-m_midDisplayLabel->width()/2-5,15);
+
+    drawTimeRangeInfo();
 }
 
 void DrawTimeline::mousePressEvent(QMouseEvent *event)
 {
     m_isPressed = true;
     m_pressDateTime = m_currentDateTime;
-    m_pressPoint = event->pos().x();
+    m_pressPointX = event->pos().x();
     QWidget::mousePressEvent(event);
 }
 
@@ -81,12 +95,10 @@ void DrawTimeline::mouseReleaseEvent(QMouseEvent *event)
 
 void DrawTimeline::mouseMoveEvent(QMouseEvent *event)
 {
-    if (m_pressPoint) {
-        int move_length = event->pos().x() - m_pressPoint;
+    if (m_isPressed) {
+        int move_length = event->pos().x() - m_pressPointX;
         float secs = m_vecStep.at(m_sizeLevel).timestep/m_vecStep.at(m_sizeLevel).pixelstep;
         m_currentDateTime = m_pressDateTime.addSecs(-secs*move_length);
-    } else {
-        // 显示鼠标停留位置的时间
     }
     update();
 }
@@ -132,6 +144,31 @@ void DrawTimeline::drawTimescale(QPainter &painter)
     }
 }
 
+void DrawTimeline::drawTimeRangeInfo()
+{
+    for (int i=0; i<m_vecTimeRangeInfo.count(); ++i) {
+        QDateTime stime = m_vecTimeRangeInfo.at(i).starttime;
+        QDateTime etime = m_vecTimeRangeInfo.at(i).endtime;
+
+        float pixelstep = m_vecStep.at(m_sizeLevel).pixelstep;
+        int timestep = m_vecStep.at(m_sizeLevel).timestep;
+        float secsper = timestep/pixelstep;
+        float sToCurrent = m_currentDateTime.secsTo(stime);
+        float eToCurrent = m_currentDateTime.secsTo(etime);
+        float length = eToCurrent - sToCurrent;
+
+        int timeX = sToCurrent/secsper + this->width()/2;
+        int timeLen = length/secsper;
+
+        QPainter paint;
+        paint.begin(this);
+        paint.setPen(QPen(Qt::cyan,1,Qt::NoPen));
+        paint.setBrush(QBrush(Qt::cyan,Qt::SolidPattern));
+        paint.drawRect(timeX,RECTY+1,timeLen,RECTHEIGH-1);
+        paint.end();
+    }
+}
+
 void DrawTimeline::on_ptn_levelup_clicked()
 {
     if (m_sizeLevel < m_totleLevel-1)
@@ -147,3 +184,4 @@ void DrawTimeline::on_ptn_leveldown_clicked()
 
     update();
 }
+
