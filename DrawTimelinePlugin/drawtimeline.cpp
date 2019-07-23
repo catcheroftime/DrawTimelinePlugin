@@ -2,6 +2,8 @@
 #include "ui_drawtimeline.h"
 
 #include <QPainter>
+#include <QMouseEvent>
+#include <QDebug>
 
 #define RECTY 50
 #define RECTHEIGH 10
@@ -9,11 +11,17 @@
 DrawTimeline::DrawTimeline(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::DrawTimeline)
-  , m_dateTime(QDateTime(QDate::currentDate(),QTime(0,0,0)))
-  , m_step(79.0)
-  , m_stepTimevalue(2*60*60)
+  , m_currentDateTime(QDateTime::currentDateTime())
+  , m_sizeLevel(4)
 {
     ui->setupUi(this);
+
+    m_vecStep.append({2*60*60,80.0});
+    m_vecStep.append({1*60*60,90.0});
+    m_vecStep.append({30*60,100.0});
+    m_vecStep.append({10*60,110.0});
+    m_vecStep.append({5*60,120.0});
+    m_totleLevel = m_vecStep.size();
 
     m_fixeDisplayLable = new QLabel(this);
     m_fixeDisplayLable->setFixedSize(QSize(150,18));
@@ -25,6 +33,14 @@ DrawTimeline::DrawTimeline(QWidget *parent) :
     m_fixeDisplayLable->setAlignment(Qt::AlignCenter);
     m_fixeDisplayLable->setStyleSheet("color:rgb(248,248,255);background:transparent");
     m_fixeDisplayLable->setVisible(true);
+
+    ui->ptn_levelup->setStyleSheet("QPushButton{background:rgba(255,255,255,0); color:rgb(255,255,255); font-size:12px}"
+                                      "QPushButton:hover{font-size:14px}"
+                                      "QPushButton:pressed{font-size:10px}");
+
+    ui->ptn_leveldown->setStyleSheet("QPushButton{background:rgba(255,255,255,0); color:rgb(255,255,255); font-size:12px}"
+                                      "QPushButton:hover{font-size:14px}"
+                                      "QPushButton:pressed{font-size:10px}");
 }
 
 DrawTimeline::~DrawTimeline()
@@ -40,106 +56,94 @@ void DrawTimeline::paintEvent(QPaintEvent *)
     painter.setBrush(Qt::black);
     painter.drawRect(rect());
 
-    // 绘制容纳时间的举行
-    painter.setPen( Qt::yellow );
-    painter.drawRect(-1,RECTY,this->width()+40,RECTHEIGH);
+    // 绘制时间刻度
+    drawTimescale(painter);
 
-    calcDistance();
-    int width = this->size().width() ;
-    int count  = width / m_step;
-
-    QDateTime dateTime =  m_dateTime;
-    int timeH = dateTime.time().hour();
-    int timeM = dateTime.time().minute();
-    int timeS = dateTime.time().second();
-
-    if(m_stepTimevalue==60*60*2) // 时间间隔为2小时
-    {
-        if(timeH%2==0 )
-        {
-            dateTime = dateTime.addSecs(-(timeM*60+timeS));
-        }
-        else
-        {
-            dateTime = dateTime.addSecs(-(timeM*60+timeS+3600));
-        }
-    }
-    else
-    {
-        if(timeM>m_stepTimevalue/60)
-        {
-            int min = timeM%(m_stepTimevalue/60);
-            dateTime = dateTime.addSecs(-(min*60+timeS));
-        }
-        else
-        {
-            dateTime = dateTime.addSecs(-(timeM*60+timeS));
-        }
-    }
-
-    for (int i = 0; i <= count; ++i)
-    {
-        dateTime = dateTime.addSecs(m_stepTimevalue);
-        float timeX = m_step * (i)+ m_distance - 10;
-        painter.setPen( Qt::white );
-        painter.drawText(timeX, RECTY-10, dateTime.toString("hh:mm"));
-        painter.setPen( Qt::yellow );
-        painter.drawLine(m_distance + m_step * i, 49, m_distance + m_step * i, 75);
-    }
-    setFixeDisplayNum();
-    m_fixeDisplayLable->setText(m_strVisibleValue);
+    // 显示中间位置时间
     painter.drawLine(this->width()/2, 5, this->width()/2, 105);
+    m_fixeDisplayLable->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
+    m_fixeDisplayLable->move(this->size().width()/2-m_fixeDisplayLable->width()/2,15);
 }
 
 void DrawTimeline::mousePressEvent(QMouseEvent *event)
 {
-
+    m_isPressed = true;
+    m_pressDateTime = m_currentDateTime;
+    m_pressPoint = event->pos().x();
+    QWidget::mousePressEvent(event);
 }
 
 void DrawTimeline::mouseReleaseEvent(QMouseEvent *event)
 {
-
+    m_isPressed = false;
+    QWidget::mouseReleaseEvent(event);
 }
 
 void DrawTimeline::mouseMoveEvent(QMouseEvent *event)
 {
-
+    if (m_pressPoint) {
+        int move_length = event->pos().x() - m_pressPoint;
+        float secs = m_vecStep.at(m_sizeLevel).timestep/m_vecStep.at(m_sizeLevel).pixelstep;
+        m_currentDateTime = m_pressDateTime.addSecs(-secs*move_length);
+    } else {
+        // 显示鼠标停留位置的时间
+    }
+    update();
 }
 
 void DrawTimeline::wheelEvent(QWheelEvent *event)
 {
+    if(event->delta() > 0)
+        on_ptn_levelup_clicked();
+    else
+        on_ptn_leveldown_clicked();
 
+    QWidget::wheelEvent(event);
 }
 
-void DrawTimeline::calcDistance()
+void DrawTimeline::drawTimescale(QPainter &painter)
 {
-    int timeH = m_dateTime.time().hour();
-    int timeM = m_dateTime.time().minute();
-    int timeS = m_dateTime.time().second();
-    int tmp;
-    if (m_stepTimevalue == 2*60*60) {
-        tmp = timeH%2==0? m_stepTimevalue - (timeM*60+timeS):tmp = m_stepTimevalue - (3600+timeM*60+timeS);
-    } else {
-        if (timeM > m_stepTimevalue/60) {
-            int min = timeM % (m_stepTimevalue/60);
-            tmp = m_stepTimevalue - (min*60+timeS);
-        } else {
-            tmp = m_stepTimevalue - (timeM*60+timeS);
-        }
+    // 绘制容纳时间的矩形
+    painter.setPen( Qt::yellow );
+    painter.drawRect(-1,RECTY,this->width()+40,RECTHEIGH);
+
+    float pixelstep = m_vecStep.at(m_sizeLevel).pixelstep;
+    int timestep = m_vecStep.at(m_sizeLevel).timestep;
+    float secsper = timestep/pixelstep;
+
+    QDateTime timeline_starttime =  m_currentDateTime.addSecs(-( this->width()/2)*secsper);
+    int timeH = timeline_starttime.time().hour();
+    int timeM = timeline_starttime.time().minute();
+    int timeS = timeline_starttime.time().second();
+    int second = timeH*3600+timeM*60+timeS;
+
+    int drawstarttime = (second/timestep+1)*timestep - second;
+    int startPosition = drawstarttime / secsper;
+
+    QDateTime show_starttime = timeline_starttime.addSecs(drawstarttime);
+    int count  = this->size().width() / pixelstep;
+    for (int i = 0; i <= count; ++i) {
+        float timeX = pixelstep*i+startPosition -10;
+        painter.setPen( Qt::white );
+        painter.drawText(timeX, RECTY-5, show_starttime.toString("hh:mm"));
+        painter.setPen( Qt::yellow );
+        painter.drawLine(pixelstep*i+startPosition, RECTY-1, pixelstep*i+startPosition, RECTY+25);
+        show_starttime = show_starttime.addSecs(timestep);
     }
-    m_distance = tmp*m_step/m_stepTimevalue;
 }
 
-
-void DrawTimeline::setFixeDisplayNum()
+void DrawTimeline::on_ptn_levelup_clicked()
 {
-    if (true) {
-        QDateTime dateTime = m_dateTime;
-        float secs = m_stepTimevalue/m_step;
-        float width = this->size().width();
-        dateTime = dateTime.addSecs((width/2)*secs);
-        m_strVisibleValue = dateTime.toString("yyyy-MM-dd hh:mm:ss");
-    } else {
+    if (m_sizeLevel < m_totleLevel-1)
+        m_sizeLevel += 1;
 
-    }
+    update();
+}
+
+void DrawTimeline::on_ptn_leveldown_clicked()
+{
+    if (m_sizeLevel >0)
+        m_sizeLevel -= 1;
+
+    update();
 }

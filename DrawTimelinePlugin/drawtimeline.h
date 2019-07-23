@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QString>
 #include <QDateTime>
+#include <QMap>
 
 namespace Ui {
 class DrawTimeline;
@@ -16,6 +17,12 @@ class DrawTimeline;
 class QDESIGNER_WIDGET_EXPORT DrawTimeline : public QWidget
 {
     Q_OBJECT
+
+    struct TimeForDistance
+    {
+        int timestep;
+        float pixelstep;
+    };
 
 public:
     struct TimeInfo {
@@ -33,25 +40,32 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent *event);
     virtual void wheelEvent(QWheelEvent *event);
 
+private slots:
+    void on_ptn_levelup_clicked();
+
+    void on_ptn_leveldown_clicked();
+
 private:
     Ui::DrawTimeline *ui;
 
-    QDateTime m_dateTime;
+    QDateTime m_pressDateTime;
+    QDateTime m_currentDateTime;
 
     QLabel *m_displayLabel;
     QLabel *m_fixeDisplayLable;
     QString m_strVisibleValue;
 
-    float m_step;
-    int m_stepTimevalue;
-    float m_distance;
-    int m_hisDistance;
-    bool m_buttonIsPressed;
+
+    int m_pressPoint;
+    bool m_isPressed;
     bool m_isOnce;
 
+    int m_sizeLevel;
+    QVector< TimeForDistance> m_vecStep;
+    int m_totleLevel;
+
 private:
-    void calcDistance();
-    void setFixeDisplayNum();
+    void drawTimescale(QPainter &painter);
 };
 
 #endif // DRAWTIMELINE_H
