@@ -68,6 +68,7 @@ private:
 private:
     void setStepLevel();
     void drawTimescale(QPainter &painter);
+    void drawTimeCursor(QPainter &painter);
     void drawTimeRangeInfo();
 };
 

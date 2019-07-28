@@ -4,8 +4,10 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QDebug>
+#include <QFont>
 
-#define RECTY 50
+#define RECTY 60
+#define CURSORHEIGTH 50
 #define RECTHEIGH 10
 
 DrawTimeline::DrawTimeline(QWidget *parent) :
@@ -24,7 +26,7 @@ DrawTimeline::DrawTimeline(QWidget *parent) :
     m_midDisplayLabel = new QLabel(this);
     m_midDisplayLabel->setFixedSize(QSize(150,22));
     m_midDisplayLabel->setAlignment(Qt::AlignCenter);
-    m_midDisplayLabel->setStyleSheet("background:rgba(255,255,255,0);color:rgb(255,255,255);");
+    m_midDisplayLabel->setStyleSheet("background:rgba(255,255,255,0);color:rgb(255,255,255);font:12px \"Microsoft YaHei\"");
 
     ui->ptn_levelup->setStyleSheet("QPushButton{background:rgba(255,255,255,0); color:rgb(255,255,255); font-size:12px}"
                                    "QPushButton:hover{font-size:14px}"
@@ -77,18 +79,20 @@ void DrawTimeline::paintEvent(QPaintEvent *)
 {
     // 绘制黑色的背景
     QPainter painter(this);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(Qt::black);
+    painter.setBrush(QColor{50,50,50});
     painter.drawRect(rect());
 
     // 绘制时间刻度
     drawTimescale(painter);
 
-    // 显示中间位置时间
-    painter.drawLine(this->width()/2, 5, this->width()/2, 105);
-    m_midDisplayLabel->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
-    m_midDisplayLabel->move(this->size().width()/2-m_midDisplayLabel->width()/2-5,15);
+    // 绘制中间的游标
+    drawTimeCursor(painter);
 
+    // 显示中间位置时间
+    m_midDisplayLabel->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
+    m_midDisplayLabel->move(this->size().width()/2-m_midDisplayLabel->width()/2-5,10);
+
+    // 绘制具体的时间数据
     drawTimeRangeInfo();
 }
 
@@ -129,7 +133,7 @@ void DrawTimeline::wheelEvent(QWheelEvent *event)
 void DrawTimeline::drawTimescale(QPainter &painter)
 {
     // 绘制容纳时间的矩形
-    painter.setPen( Qt::yellow );
+    painter.setPen( QColor{150,150,150});
     painter.drawRect(-1,RECTY,this->width()+40,RECTHEIGH);
 
     float pixelstep = m_vecStep.at(m_sizeLevel).pixelstep;
@@ -146,16 +150,32 @@ void DrawTimeline::drawTimescale(QPainter &painter)
     int startPosition = drawstarttime / secsper;
 
     QDateTime show_starttime = timeline_starttime.addSecs(drawstarttime);
+    QFont font{"\"Microsoft YaHei\"",8,57};
     int count  = this->size().width() / pixelstep;
     for (int i = 0; i <= count; ++i) {
         float timeX = pixelstep*i+startPosition -10;
-        painter.setPen( Qt::white );
+        painter.setFont(font);
         painter.drawText(timeX, RECTY-5, show_starttime.toString("hh:mm"));
-        painter.setPen( Qt::yellow );
         painter.drawLine(pixelstep*i+startPosition, RECTY-1, pixelstep*i+startPosition, RECTY+25);
         show_starttime = show_starttime.addSecs(timestep);
     }
 }
+
+void DrawTimeline::drawTimeCursor(QPainter &painter)
+{
+    painter.setPen( QPen{QColor{255,0,0,200},2});
+    painter.drawLine(this->width()/2+1, CURSORHEIGTH, this->width()/2+1, 105);
+    QPolygonF cursorPolygon;
+    cursorPolygon << QPointF(this->size().width()/2,   CURSORHEIGTH)
+                  << QPointF(this->size().width()/2+4, CURSORHEIGTH-4)
+                  << QPointF(this->size().width()/2+4, CURSORHEIGTH-12)
+                  << QPointF(this->size().width()/2-4, CURSORHEIGTH-12)
+                  << QPointF(this->size().width()/2-4, CURSORHEIGTH-4) ;
+    painter.setBrush(QColor{200,200,200});
+    painter.setPen(QColor{200,200,200});
+    painter.drawPolygon(cursorPolygon);
+}
+
 
 void DrawTimeline::drawTimeRangeInfo()
 {
@@ -175,7 +195,7 @@ void DrawTimeline::drawTimeRangeInfo()
 
         QPainter paint;
         paint.begin(this);
-        paint.setPen(QPen(Qt::cyan,1,Qt::NoPen));
+        paint.setPen(QPen(Qt::darkYellow,1,Qt::NoPen));
         paint.setBrush(QBrush(Qt::cyan,Qt::SolidPattern));
         paint.drawRect(timeX,RECTY+1,timeLen,RECTHEIGH-1);
         paint.end();
