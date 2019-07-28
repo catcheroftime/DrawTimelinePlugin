@@ -77,7 +77,7 @@ void DrawTimeline::setStepLevel()
 
 void DrawTimeline::paintEvent(QPaintEvent *)
 {
-    // 绘制黑色的背景
+    // 绘制背景
     QPainter painter(this);
     painter.setBrush(QColor{50,50,50});
     painter.drawRect(rect());
@@ -85,15 +85,15 @@ void DrawTimeline::paintEvent(QPaintEvent *)
     // 绘制时间刻度
     drawTimescale(painter);
 
-    // 绘制中间的游标
-    drawTimeCursor(painter);
-
     // 显示中间位置时间
     m_midDisplayLabel->setText(m_currentDateTime.toString("yyyy-MM-dd hh:mm:ss"));
     m_midDisplayLabel->move(this->size().width()/2-m_midDisplayLabel->width()/2-5,10);
 
     // 绘制具体的时间数据
-    drawTimeRangeInfo();
+    drawTimeRangeInfo(painter);
+
+    // 绘制中间的游标
+    drawTimeCursor(painter);
 }
 
 void DrawTimeline::mousePressEvent(QMouseEvent *event)
@@ -177,7 +177,7 @@ void DrawTimeline::drawTimeCursor(QPainter &painter)
 }
 
 
-void DrawTimeline::drawTimeRangeInfo()
+void DrawTimeline::drawTimeRangeInfo(QPainter &paint)
 {
     for (int i=0; i<m_vecTimeRangeInfo.count(); ++i) {
         QDateTime stime = m_vecTimeRangeInfo.at(i).starttime;
@@ -193,12 +193,9 @@ void DrawTimeline::drawTimeRangeInfo()
         int timeX = sToCurrent/secsper + this->width()/2;
         int timeLen = length/secsper;
 
-        QPainter paint;
-        paint.begin(this);
         paint.setPen(QPen(Qt::darkYellow,1,Qt::NoPen));
         paint.setBrush(QBrush(Qt::cyan,Qt::SolidPattern));
         paint.drawRect(timeX,RECTY+1,timeLen,RECTHEIGH-1);
-        paint.end();
     }
 }
 
